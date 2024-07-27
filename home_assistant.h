@@ -147,6 +147,5 @@ void setupHA() {
 }
 
 void loopHA() {
-  //connectToWiFi();  // check we are connected (do we need this?)
   mqtt.loop();
 }

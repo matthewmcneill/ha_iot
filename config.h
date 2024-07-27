@@ -54,6 +54,7 @@ String loadConfig(String key, String defaultValue = "", String prompt = "", bool
   // save the value (putString checks for nugatory writes)
   preferences.putString(key.c_str(), value);
 
+  // uncomment this line to get a serial readout of your configuraiton on startup
   // logText("Config: " + key + " = " + value);
 
   return value;
@@ -116,8 +117,6 @@ void setupConfig() {
     )) || (config.mqttBrokerAddress == IPAddress(0,0,0,0)) ) {
       logStatus("Could not parse IP Address, please try again.");
     }
-
-    String ipAddress = config.mqttBrokerAddress.toString();
     
   preferences.end();
 
