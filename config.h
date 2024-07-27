@@ -13,25 +13,20 @@ Preferences preferences;
 
 struct ConfigurationStructType {
   // general configuration items, defaults can be specified here, leave blank if you want to force setup
-  String deviceID               = ""; //"cb-IoT-HA-01";
+  String deviceID               = "";
   String deviceSoftwareVersion  = "1.0.0";
   String deviceManufacturer     = "Arduino";
   String deviceModel            = "Nano 33 IoT"; 
   String timeZone               = "Europe/London";
-  IPAddress mqttBrokerAddress   = IPAddress(0,0,0,0); //IPAddress(192,168,86,45);  
+  IPAddress mqttBrokerAddress   = IPAddress(0,0,0,0);   
 
   // Secret Items (really should NOT have defaults specificed here in the source code)
-  String secretWiFiSSID         = ""; //"cb-home";  
-  String secretWiFiPassword     = ""; //"sycamore75"; 
-//  String secretWiFiSSID         = "gmobile";
-//  String secretWiFiPassword     = "nowletmein";
-  String secretMqttUser         = ""; //"cbiot";  
-  String secretMqttPassword     = ""; //"cb_iot_mqtt";     
+  String secretWiFiSSID         = ""; 
+  String secretWiFiPassword     = ""; 
+  String secretMqttUser         = "";
+  String secretMqttPassword     = "";    
 } config;
 
-
-// consider how we could read this information as defaults and/or store to preferences on the device and make them configurable
-// https://randomnerdtutorials.com/esp32-save-data-permanently-preferences/
 
 String loadConfig(String key, String defaultValue = "", String prompt = "", bool mandatory = false, bool force = false) {
   // assumes a preferences namespace has been opened
@@ -110,7 +105,7 @@ void setupConfig() {
       FORCE_RECONFIGURE
     );
 
-    while (!config.mqttBrokerAddress.fromString( 
+    while ((!config.mqttBrokerAddress.fromString( 
       loadConfig(
         "mqtt_broker_ip", 
         config.mqttBrokerAddress.toString(),
@@ -118,7 +113,7 @@ void setupConfig() {
         true,
         FORCE_RECONFIGURE
       ).c_str() 
-    )) {
+    )) || (config.mqttBrokerAddress == IPAddress(0,0,0,0)) ) {
       logStatus("Could not parse IP Address, please try again.");
     }
 

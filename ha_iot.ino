@@ -1,3 +1,6 @@
+// -----[MAIN MODULE]----- 
+// main Arduino initialisation and control loops
+
 #include "config.h"         // installation configuration data
 #include "logStatus.h"      // library for logging and debugging
 #include "wifi.h"           // library to control the wifi connection
@@ -26,7 +29,7 @@ void setup() {
 void loop() {
 
   // process modules
-  loopTime();
-  loopHA();
+  loopTime();     // do ezTime updates
+  loopHA();       // home assistant updates
 
 }
