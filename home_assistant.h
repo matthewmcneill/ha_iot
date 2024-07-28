@@ -34,19 +34,20 @@ struct ThreadPointersType {
 #include <HADevice.h>           //  |
 #include <HAMqtt.h>             //  |
 
+WiFiClient networkClient;               // declare a wifi client object for the HA MQTT connection 
+HADevice ha_device;                     // define a home assistant device
+HAMqtt mqtt(networkClient, ha_device);  // declare the MQTT object for the HADevice to communicate to the broker over wifi
+
 struct HADataType {
-  HADevice device;              // define a home assistant device
+//  HADevice device;              // can't define a home assistant device here (have to connect the MQTT broker to the device before adding the entities)
   struct HAUIPointersType {
     // declare Home Assistant entities here
-    HAButton buttonA = HAButton("cbButtonA");
-    HAButton buttonB = HAButton("cbButtonB");
-    HASwitch led = HASwitch("cbLed");
-    HASensorNumber temperature = HASensorNumber("cbTemperature", HASensorNumber::PrecisionP1);
+    HAButton buttonA = HAButton("cbButtonA02");
+    HAButton buttonB = HAButton("cbButtonB02");
+    HASwitch led = HASwitch("cbLed02");
+    HASensorNumber temperature = HASensorNumber("cbTemperature02", HASensorNumber::PrecisionP1);
   } entities;
 } ha;
-
-WiFiClient networkClient;               // declare a wifi client object for the HA MQTT connection 
-HAMqtt mqtt(networkClient, ha.device);  // declare the MQTT object for the HADevice to communicate to the broker over wifi
 
 // ====================================[ HA control plane definitions ]=======================================
 
@@ -99,7 +100,7 @@ void createControlPlane() {
 
   // set up the LED
   pinMode(LED_BUILTIN, OUTPUT);
-  digitalWrite(LED_BUILTIN, LOW);
+  //digitalWrite(LED_BUILTIN, LOW);
 
   // LED switch
   ha.entities.led.setName("My LED"); // optional
@@ -128,6 +129,8 @@ void createControlPlane() {
 
 
 void onTemperatureUpdateEvent() {
+    // Update Temperature
+    // logStatus("update temperature");
     float tempValue = getTempValueDegC(); // Get temperature reading from sensor
     ha.entities.temperature.setValue(tempValue); // Send to Home Assistant 
 }
@@ -159,24 +162,24 @@ void setupHA() {
   WiFi.macAddress(macAddress);
 
   // Initialize the HADevice object
-  ha.device.setUniqueId(macAddress, sizeof(macAddress));
-  ha.device.setName(config.deviceID.c_str());
-  ha.device.setSoftwareVersion(config.deviceSoftwareVersion.c_str());
-  ha.device.setManufacturer(config.deviceManufacturer.c_str());
-  ha.device.setModel(config.deviceModel.c_str());
-  // ha.device.setConfigurationUrl("http://192.168.1.55:1234");
+  ha_device.setUniqueId(macAddress, sizeof(macAddress));
+  ha_device.setName(config.deviceID.c_str());
+  ha_device.setSoftwareVersion(config.deviceSoftwareVersion.c_str());
+  ha_device.setManufacturer(config.deviceManufacturer.c_str());
+  ha_device.setModel(config.deviceModel.c_str());
+  // ha_device.setConfigurationUrl("http://192.168.1.55:1234");
   
   // set up the availability options and LWT
   // This method enables availability for all device types registered on the device.
   // For example, if you have 5 sensors on the same device, you can enable
   // shared availability and change availability state of all sensors using
   // single method call "device.setAvailability(false|true)"
-  ha.device.enableSharedAvailability();
+  ha_device.enableSharedAvailability();
 
   // Optionally, you can enable MQTT LWT feature. If device will lose connection
   // to the broker, all device types related to it will be marked as offline in
   // the Home Assistant Panel.
-  ha.device.enableLastWill();
+  ha_device.enableLastWill();
 
   // [2] -- set up the HA control plane --
   logStatus("Creating HA control plane...");
@@ -193,6 +196,7 @@ void setupHA() {
   }
   
   logStatus("Connected to MQTT Broker");
+  ha_device.publishAvailability();
 
 }
 
