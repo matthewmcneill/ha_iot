@@ -7,6 +7,7 @@
 
 #include "logStatus.h"
 #include "wifi.h"
+
 // Nano IoT 33 has NVS but no EEPROM so you need to edit ezTime.h header file with correct options. 
 // I would have preferred that they are set here in the code.
 // #undef EZTIME_CACHE_EEPROM
@@ -16,11 +17,11 @@
 Timezone tzLondon;
 
 void setupTime() {
-  setupWiFi();      // ensure that wifi is set up and connected
+  setupWiFi();           // ensure that wifi is set up and connected
   // set up the timer
   ezt::setInterval(60);  // set interval for NTP time sync polling
   logStatus("Syncing NTP...");
-	ezt::waitForSync();    // ensure that the time is synced
+	ezt::waitForSync(5);    // ensure that the time is synced (5 sec timeout)
 
 	// Provide official timezone names
 	// https://en.wikipedia.org/wiki/List_of_tz_database_time_zones

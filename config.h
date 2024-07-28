@@ -90,7 +90,7 @@ void setupConfig() {
       false
     );
 
-  config.deviceModel = loadConfig(
+    config.deviceModel = loadConfig(
       "dvc_model", 
       config.deviceModel,
       "Device Model: this should not need to be configured: ",
@@ -106,16 +106,16 @@ void setupConfig() {
       FORCE_RECONFIGURE
     );
 
-    while ((!config.mqttBrokerAddress.fromString( 
+    while (!config.mqttBrokerAddress.fromString( 
       loadConfig(
         "mqtt_broker_ip", 
         config.mqttBrokerAddress.toString(),
         "Please enter a valid IP address for the MQTT broker: ",
         true,
-        FORCE_RECONFIGURE
-      ).c_str() 
-    )) || (config.mqttBrokerAddress == IPAddress(0,0,0,0)) ) {
-      logStatus("Could not parse IP Address, please try again.");
+        FORCE_RECONFIGURE 
+      ).c_str() )) 
+    {
+      logStatus("Could not parse IP Address, or IP address is unconfigured value 0.0.0.0, please try again.");
     }
     
   preferences.end();

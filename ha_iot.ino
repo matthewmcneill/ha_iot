@@ -4,9 +4,10 @@
 #include "config.h"         // installation configuration data
 #include "logStatus.h"      // library for logging and debugging
 #include "wifi.h"           // library to control the wifi connection
-//#include "time.h"           // NTP time sync library for knowing actual time - uses ezTime library, which needs flags to be configured (see time.h for more info)
-//#include "crypto.h"         // crypto control and configuration - don't need this, but may be useful if you are thinking abour TLS connections
+// #include "time.h"           // NTP time sync library for knowing actual time - uses ezTime library, which needs flags to be configured (see time.h for more info)
+// #include "crypto.h"         // crypto control and configuration - don't need this, but may be useful if you are thinking abour TLS connections
 #include "home_assistant.h" // home assistant module
+#include "temp_sensor.h"    // temperature sensor setup
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -19,6 +20,7 @@ void setup() {
   setupWiFi();
 //  setupTime();
 //  setupCrypto();
+  setupTempSensors();
   setupHA();
   
   // finish startup
