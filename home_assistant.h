@@ -198,7 +198,7 @@ void setupHA() {
 
 void loopHA() {
   // run ThreadController and execute all scheduled timer events (threads)
-	threads.controller.run();
+  threads.controller.run();
   // check we still have the network up - its flakey on the Nano IoT 33
   connectToWiFi();
   // execute all the MQTT updates
