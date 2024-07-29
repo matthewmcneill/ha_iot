@@ -66,19 +66,18 @@ public:
             {
               // LED switch
               led.setIcon("mdi:lightbulb");
-              led.setName("My LED"); // optional
+              led.setName("My LED"); 
               // Button A
-              buttonA.setIcon("mdi:numeric-2-circle"); // optional
-              buttonA.setName("Flash LED 2x"); // optional
+              buttonA.setIcon("mdi:numeric-2-circle"); 
+              buttonA.setName("Flash LED 2x"); 
               // Button B
-              buttonB.setIcon("mdi:numeric-3-circle"); // optional
-              buttonB.setName("Flash LED 3x"); // optional
+              buttonB.setIcon("mdi:numeric-3-circle"); 
+              buttonB.setName("Flash LED 3x"); 
               // Temperature sensor
               temperature.setName("Temperature °C");
               temperature.setUnitOfMeasurement("°C");
-              temperature.setIcon("mdi:thermometer-water"); // optional
+              temperature.setIcon("mdi:thermometer-water");
             }
-
     };
     HAEntitiesType entities; // container object for entities
 };
@@ -188,9 +187,9 @@ void setupHA() {
 
   // [2] -- set up the HA control plane --
   logStatus("Connecting HA control plane...");
-  ha.entities.led.onCommand(onSwitchCommand); // switch callbacks
-  ha.entities.buttonA.onCommand(onButtonCommand); // press callbacks
-  ha.entities.buttonB.onCommand(onButtonCommand); // press callbacks
+  ha.entities.led.onCommand(onSwitchCommand); // attach switch callback
+  ha.entities.buttonA.onCommand(onButtonCommand); // attach button press callback
+  ha.entities.buttonB.onCommand(onButtonCommand); // attach button press callback
     
   // [3] -- connect to the WiFiClient and MQTT --
   
