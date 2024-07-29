@@ -40,20 +40,3 @@ float getTempValueDegC() {
 //  Serial.println(tempSensors.getTempCByIndex(0)); 
   return (tempSensors.getTempCByIndex(0));
 }
-
-/*
-void loopTempSensors(void){   
-  if ((millis() - lastTempTime) > timeIntervalTemp) {
-    lastTempTime = millis();
-
-    // Call tempSensors.requestTemperatures() to issue a global temperature and Requests to all devices on the bus
-    tempSensors.requestTemperatures(); 
-
-    Serial.print("Celsius temperature: ");
-    // Why "byIndex"? You can have more than one IC on the same bus. 0 refers to the first IC on the wire
-    Serial.print(tempSensors.getTempCByIndex(0)); 
-    Serial.print(" - Fahrenheit temperature: ");
-    Serial.println(tempSensors.getTempFByIndex(0));
-  }
-}
-*/
