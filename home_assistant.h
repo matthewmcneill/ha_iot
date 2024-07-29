@@ -35,23 +35,57 @@ struct ThreadPointersType {
 #include <HAMqtt.h>             //  |
 
 WiFiClient networkClient;               // declare a wifi client object for the HA MQTT connection 
-HADevice ha_device;                     // define a home assistant device
-HAMqtt mqtt(networkClient, ha_device);  // declare the MQTT object for the HADevice to communicate to the broker over wifi
 
-struct HADataType {
-//  HADevice device;              // can't define a home assistant device here (have to connect the MQTT broker to the device before adding the entities)
-  struct HAUIPointersType {
-    // declare Home Assistant entities here
-    HAButton buttonA = HAButton("cbButtonA02");
-    HAButton buttonB = HAButton("cbButtonB02");
-    HASwitch led = HASwitch("cbLed02");
-    HASensorNumber temperature = HASensorNumber("cbTemperature02", HASensorNumber::PrecisionP1);
-  } entities;
-} ha;
+// a nice herlper class to organise all the HA objects into a neat collection 
+// that makes them easier to navigate in the logic and collects all the configuration 
+// together into a neat package.  Note that the order of construction is very precise
+class HADataType {
+public:
+    HADevice device; // HADevice entity object
+    HAMqtt mqtt;     // mqtt communication object
+    // Constructor for HADataType
+    HADataType(arduino::Client &netClient) :
+        device(),
+        mqtt(netClient, this->device),  // needs to be constructed here with the newly created device in this order
+        entities()
+        {}; 
 
-// ====================================[ HA control plane definitions ]=======================================
+    // Nested class for defining the Entities on the device
+    class HAEntitiesType {
+    public:            
+        HAButton buttonA;
+        HAButton buttonB;
+        HASwitch led;
+        HASensorNumber temperature;
+        // Set up all the entities (note that event handlers are added later)
+        HAEntitiesType() : 
+            buttonA("cbButtonA02"), 
+            buttonB("cbButtonB02"),
+            led("cbLed02"),
+            temperature("cbTemperature02", HASensorNumber::PrecisionP1) 
+            {
+              // LED switch
+              led.setIcon("mdi:lightbulb");
+              led.setName("My LED"); // optional
+              // Button A
+              buttonA.setIcon("mdi:numeric-2-circle"); // optional
+              buttonA.setName("Flash LED 2x"); // optional
+              // Button B
+              buttonB.setIcon("mdi:numeric-3-circle"); // optional
+              buttonB.setName("Flash LED 3x"); // optional
+              // Temperature sensor
+              temperature.setName("Temperature °C");
+              temperature.setUnitOfMeasurement("°C");
+              temperature.setIcon("mdi:thermometer-water"); // optional
+            }
 
-// ---------------- control plane event handlers ----------------
+    };
+    HAEntitiesType entities; // container object for entities
+};
+// Create instance of the HA controller object, and connect it to the network
+HADataType ha(networkClient); 
+
+// ====================================[ HA control plane event handlers ]=======================================
 
 void onButtonCommand(HAButton* sender)
 {
@@ -94,35 +128,6 @@ void onSwitchCommand(bool state, HASwitch* sender)
     sender->setState(state); // report state back to the Home Assistant
 }
 
-// ------------------- configure the entities ------------------
-
-void createControlPlane() {
-
-  // set up the LED
-  pinMode(LED_BUILTIN, OUTPUT);
-  //digitalWrite(LED_BUILTIN, LOW);
-
-  // LED switch
-  ha.entities.led.setName("My LED"); // optional
-  ha.entities.led.onCommand(onSwitchCommand); // switch callbacks
-
-  // Button A
-  ha.entities.buttonA.setIcon("mdi:numeric-2-circle"); // optional
-  ha.entities.buttonA.setName("Flash LED 2x"); // optional
-  ha.entities.buttonA.onCommand(onButtonCommand); // press callbacks
-    
-  // Button B
-  ha.entities.buttonB.setIcon("mdi:numeric-3-circle"); // optional
-  ha.entities.buttonB.setName("Flash LED 3x"); // optional
-  ha.entities.buttonB.onCommand(onButtonCommand); // press callbacks
-
-  // Temperature sensor
-  ha.entities.temperature.setName("Temperature °C");
-  ha.entities.temperature.setUnitOfMeasurement("°C");
-  ha.entities.temperature.setIcon("mdi:thermometer-water"); // optional
-
-}
-
 // ====================================[ Timer Events (Thread) Setup ]====================================
 
 // ---------------- thread event handlers ----------------
@@ -162,11 +167,11 @@ void setupHA() {
   WiFi.macAddress(macAddress);
 
   // Initialize the HADevice object
-  ha_device.setUniqueId(macAddress, sizeof(macAddress));
-  ha_device.setName(config.deviceID.c_str());
-  ha_device.setSoftwareVersion(config.deviceSoftwareVersion.c_str());
-  ha_device.setManufacturer(config.deviceManufacturer.c_str());
-  ha_device.setModel(config.deviceModel.c_str());
+  ha.device.setUniqueId(macAddress, sizeof(macAddress));
+  ha.device.setName(config.deviceID.c_str());
+  ha.device.setSoftwareVersion(config.deviceSoftwareVersion.c_str());
+  ha.device.setManufacturer(config.deviceManufacturer.c_str());
+  ha.device.setModel(config.deviceModel.c_str());
   // ha_device.setConfigurationUrl("http://192.168.1.55:1234");
   
   // set up the availability options and LWT
@@ -174,29 +179,31 @@ void setupHA() {
   // For example, if you have 5 sensors on the same device, you can enable
   // shared availability and change availability state of all sensors using
   // single method call "device.setAvailability(false|true)"
-  ha_device.enableSharedAvailability();
+  ha.device.enableSharedAvailability();
 
   // Optionally, you can enable MQTT LWT feature. If device will lose connection
   // to the broker, all device types related to it will be marked as offline in
   // the Home Assistant Panel.
-  ha_device.enableLastWill();
+  ha.device.enableLastWill();
 
   // [2] -- set up the HA control plane --
-  logStatus("Creating HA control plane...");
-  createControlPlane();
-  
+  logStatus("Connecting HA control plane...");
+  ha.entities.led.onCommand(onSwitchCommand); // switch callbacks
+  ha.entities.buttonA.onCommand(onButtonCommand); // press callbacks
+  ha.entities.buttonB.onCommand(onButtonCommand); // press callbacks
+    
   // [3] -- connect to the WiFiClient and MQTT --
   
   logStatus("Connecting to MQTT Broker...");
   // Initialize the HAMqtt object
 
-  while(!mqtt.begin(config.mqttBrokerAddress, config.secretMqttUser.c_str(), config.secretMqttPassword.c_str())) {
+  while(!ha.mqtt.begin(config.mqttBrokerAddress, config.secretMqttUser.c_str(), config.secretMqttPassword.c_str())) {
     logError("Retrying in 5 seconds...");
     delay(5000);
   }
   
   logStatus("Connected to MQTT Broker");
-  ha_device.publishAvailability();
+  ha.device.publishAvailability();
 
 }
 
@@ -206,5 +213,5 @@ void loopHA() {
   // check we still have the network up - its flakey on the Nano IoT 33
   connectToWiFi();
   // execute all the MQTT updates
-  mqtt.loop();
+  ha.mqtt.loop();
 }
