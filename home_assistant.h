@@ -33,9 +33,10 @@ public:
     HAMqtt mqtt;     // mqtt communication object
     // Constructor for HADataType
     HADataType(arduino::Client &netClient) :
-        device(),
+        device(),                       
         mqtt(netClient, this->device),  // needs to be constructed here with the newly created device in this order
-        entities()
+        entities(),
+        timers()
         {}; 
 
     // Nested class for defining the Entities on the device
@@ -69,13 +70,11 @@ public:
     };
     HAEntitiesType entities; // container object for entities
 
-    // add in an object to drive all the events we want to run on a timer
+    // Nested class for defining the events we want to run on a timer
     class ThreadTimersType {
     public: 
       ThreadController controller;  // ThreadController that will controll all threads
-      // declare all timer events as threads here
       Thread updateTemperature;     // timer thread for polling the temperature sensor
-      
       ThreadTimersType() :
           controller(),
           updateTemperature() 
@@ -85,7 +84,7 @@ public:
           }
     } timers;
 
-    // convenient method to drive all the polling on the ha object and raise the events
+    // Method to drive all the polling on the ha object and raise the events
     void loop() {
       this->timers.controller.run();    // poll all the timer events
       this->mqtt.loop();                // then propagate any status to MQTT and poll MQTT events
