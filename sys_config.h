@@ -2,8 +2,8 @@
 // software configurations and definitions
 #pragma once
 #include <Preferences.h>
-#include "logStatus.h"
-#include "serial_utils.h"
+#include "sys_logStatus.h"
+#include "sys_serial_utils.h"
 
 // uncomment this to force a reconfiguration of the parameters
 // this requires the device to be connected to the serial console for setup
@@ -14,7 +14,7 @@ Preferences preferences;
 struct ConfigurationStructType {
   // general configuration items, defaults can be specified here, leave blank if you want to force setup
   String deviceID               = "";
-  String deviceSoftwareVersion  = "1.0.0";
+  String deviceSoftwareVersion  = "1.0.1";
   String deviceManufacturer     = "Arduino";
   String deviceModel            = "Nano 33 IoT"; 
   String timeZone               = "Europe/London";
@@ -74,6 +74,7 @@ void setupConfig() {
       FORCE_RECONFIGURE
     );
 
+    /* not sure we should store this in the EEPROM - it is a property of the SW, just use the coded default
     config.deviceSoftwareVersion = loadConfig(
       "dvc_sw_ver", 
       config.deviceSoftwareVersion,
@@ -81,6 +82,7 @@ void setupConfig() {
       true,
       false
     );
+    */
 
     config.deviceManufacturer = loadConfig(
       "dvc_manuf", 

@@ -5,8 +5,8 @@
 #pragma once
 // un-comment this line to print the debugging statements
 
-#include "logStatus.h"
-#include "wifi.h"
+#include "sys_logStatus.h"
+#include "sys_wifi.h"
 
 // Nano IoT 33 has NVS but no EEPROM so you need to edit ezTime.h header file with correct options. 
 // I would have preferred that they are set here in the code.

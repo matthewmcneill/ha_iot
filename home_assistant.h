@@ -4,35 +4,23 @@
 #pragma once
 
 // include system modules
-#include "config.h"
-#include "logStatus.h"
-#include "wifi.h"
+#include "sys_config.h"
+#include "sys_logStatus.h"
+#include "sys_wifi.h"
 
-// include sensor sub-modules
-#include "temp_sensor.h"
-
-// --------------[ Thread objects ]-----------------
-
-#include <Thread.h>             // simple threading library for time event driven updates
-#include <ThreadController.h>   //  |
-
-// ThreadController that will controll all threads
-struct ThreadPointersType {
-  ThreadController controller = ThreadController();
-  // declare all threads here (i.e. in global vars to persist pointers)
-  Thread updateTemperature = Thread();
-} threads;
-
-// ----------[ Home Assistant objects ]--------------
+// ====================================[ HA device + entity definition ]=======================================
 
 // Turns on debug information of the ArduinoHA core (from <ArduinoHADefines.h>)
 // Please note that you need to initialize serial interface 
 // by calling Serial.begin([baudRate]) before initializing ArduinoHA.
 // #define ARDUINOHA_DEBUG
+
 #include <ArduinoHADefines.h>   // HA libraries
 #include <ArduinoHA.h>          //  |
 #include <HADevice.h>           //  |
 #include <HAMqtt.h>             //  |
+#include <Thread.h>             // simple threading library for time event driven updates
+#include <ThreadController.h>   //  |
 
 WiFiClient networkClient;               // declare a wifi client object for the HA MQTT connection 
 
@@ -80,86 +68,49 @@ public:
             }
     };
     HAEntitiesType entities; // container object for entities
+
+    // add in an object to drive all the events we want to run on a timer
+    class ThreadTimersType {
+    public: 
+      ThreadController controller;  // ThreadController that will controll all threads
+      // declare all timer events as threads here
+      Thread updateTemperature;     // timer thread for polling the temperature sensor
+      
+      ThreadTimersType() :
+          controller(),
+          updateTemperature() 
+          {
+              // add all the threads to the controller
+              this->controller.add(&this->updateTemperature);
+          }
+    } timers;
+
+    // convenient method to drive all the polling on the ha object and raise the events
+    void loop() {
+      this->timers.controller.run();    // poll all the timer events
+      this->mqtt.loop();                // then propagate any status to MQTT and poll MQTT events
+    }
 };
 // Create instance of the HA controller object, and connect it to the network
 HADataType ha(networkClient); 
 
-// ====================================[ HA control plane event handlers ]=======================================
+// ====================[ Include all the sensor and indicator control modules here ]=====================
 
-void onButtonCommand(HAButton* sender)
-{
-    bool state = (digitalRead(LED_BUILTIN) == HIGH);
+// have to put them after the ha class definition and instantiation, so that they can reference it
+// seems a bit hacky but that's the consequence of combining .h and .cpp and/or the use of a 
+// global ha variable.  However the overall code is simpler
 
-    if (sender == &ha.entities.buttonA) {
-        // button A was clicked, do your logic here
-        logText("Button A Pressed");
-        digitalWrite(LED_BUILTIN, (!state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (!state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-        delay(250);
-
-    } else if (sender == &ha.entities.buttonB) {
-        // button B was clicked, do your logic here
-        logText("Button B Pressed");
-        digitalWrite(LED_BUILTIN, (!state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (!state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (!state ? HIGH : LOW));
-        delay(250);
-        digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-        delay(250);
-    }
-}
-
-void onSwitchCommand(bool state, HASwitch* sender)
-{
-    //Serial.println("Switch Command");
-    digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-    sender->setState(state); // report state back to the Home Assistant
-}
-
-// ====================================[ Timer Events (Thread) Setup ]====================================
-
-// ---------------- thread event handlers ----------------
-
-
-void onTemperatureUpdateEvent() {
-    // Update Temperature
-    // logStatus("update temperature");
-    float tempValue = getTempValueDegC(); // Get temperature reading from sensor
-    ha.entities.temperature.setValue(tempValue); // Send to Home Assistant 
-}
-
-// --------------- configure the threads ------------------
-
-void setupThreads() {
-  // Thread for regular updates of the temperature sensor
-	threads.updateTemperature.onRun(onTemperatureUpdateEvent);
-	threads.updateTemperature.setInterval(5000); 
-	// Add thread to the controller
-	threads.controller.add(&threads.updateTemperature);
-}
+// include sensor sub-modules
+#include "sensor_temperature.h"   // control module for the temperature sensor
+#include "indicator_LED.h"        // control module for the indicator LED
 
 // ====================================[ HA setup and connection ]=======================================
  
 void setupHA() {
 
-  // [0] -- set up all the event timer threads
-  logStatus("Setting up sensor event timers");
-  setupThreads();
-
   // [1] -- set up the HA device --
 
-  logStatus("Setting up HA Device.");
+  logStatus("Configuring the HA Device.");
   // Retrieve MAC address from the wifi card and initialise the HA device with that as the unique ID
 
   byte macAddress[WL_MAC_ADDR_LENGTH]; // a byte string to containg the mac address we need to configure the HA device
@@ -186,13 +137,13 @@ void setupHA() {
   ha.device.enableLastWill();
 
   // [2] -- set up the HA control plane --
+
   logStatus("Connecting HA control plane...");
-  ha.entities.led.onCommand(onSwitchCommand); // attach switch callback
-  ha.entities.buttonA.onCommand(onButtonCommand); // attach button press callback
-  ha.entities.buttonB.onCommand(onButtonCommand); // attach button press callback
+  setupTempSensors();     
+  setupLedIndicator();
     
   // [3] -- connect to the WiFiClient and MQTT --
-  
+
   logStatus("Connecting to MQTT Broker...");
   // Initialize the HAMqtt object
 
@@ -204,13 +155,4 @@ void setupHA() {
   logStatus("Connected to MQTT Broker");
   ha.device.publishAvailability();
 
-}
-
-void loopHA() {
-  // run ThreadController and execute all scheduled timer events (threads)
-  threads.controller.run();
-  // check we still have the network up - its flakey on the Nano IoT 33
-  connectToWiFi();
-  // execute all the MQTT updates
-  ha.mqtt.loop();
 }

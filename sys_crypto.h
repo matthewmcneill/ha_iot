@@ -17,8 +17,8 @@
 #include <utility/ECCX08JWS.h>
 #include <utility/ECCX08DefaultTLSConfig.h> // needed to set up the PEM for the first time
 #include <ArduinoJson.h>
-#include "logStatus.h"
-#include "serial_utils.h"
+#include "sys_logStatus.h"
+#include "sys_serial_utils.h"
 
 #define CRYPTO_SLOT 0
 
