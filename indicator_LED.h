@@ -41,22 +41,20 @@ void onButtonCommand(HAButton* sender)
 
 void onSwitchCommand(bool state, HASwitch* sender)
 {
-    //Serial.println("Switch Command");
-    digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
-    sender->setState(state); // report state back to the Home Assistant
+  //Serial.println("Switch Command");
+  digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
+  sender->setState(state); // report state back to the Home Assistant
 }
 
 
 void setupLedIndicator(void)
 {
-    // light up for startup
+  // light up for startup
   pinMode(LED_BUILTIN, OUTPUT);
-
   logStatus("Setting up internal LED controls");
   ha.entities.led.onCommand(onSwitchCommand);      // attach switch callback
   ha.entities.buttonA.onCommand(onButtonCommand); // attach button press callback
   ha.entities.buttonB.onCommand(onButtonCommand); // attach button press callback 
-
 }
 
 
