@@ -6,6 +6,8 @@
 
 // un-comment this line to print the debugging statements
 #define DEBUG
+// uncomment this line to use the internal LED for debugging
+#define DEBUG_LED
 
 #ifdef DEBUG
   #define DPRINT(...)    Serial.print(__VA_ARGS__)
@@ -16,15 +18,15 @@
   #define DPRINTLN(...)
 #endif
 
-// uncomment this line to use the internal LED for debugging
-// #define DEBUG_LED
-
-void blinkLED(int duration) {
+void blinkLED(int duration, int numberOfTimes = 1) {
 #ifdef DEBUG_LED
-  digitalWrite(LED_BUILTIN, HIGH);
-  delay(duration);
-  digitalWrite(LED_BUILTIN, LOW);
-  delay(100);
+  bool state = (digitalRead(LED_BUILTIN) == HIGH);
+  for (int i = 0; i < numberOfTimes; ++i) {
+    digitalWrite(LED_BUILTIN, (!state ? HIGH : LOW));
+    delay(duration);
+    digitalWrite(LED_BUILTIN, (state ? HIGH : LOW));
+    delay(duration);
+  }
 #endif
 }
 
@@ -52,23 +54,21 @@ void logText(String msg) {
 
 void logStatus(String msg) {
   logText(msg);
-  blinkLED(100);
+  blinkLED(50);
 }
 
 void logError(String msg) {
   logText("Error: " + msg);
-  blinkLED(100);
-  blinkLED(100);
-  blinkLED(100);
+  blinkLED(100, 3);
 }
 
 void logSuspend(String msg) {
   logText("Execution suspended: " + msg);
-#ifdef DEBUG_LED
-  digitalWrite(LED_BUILTIN, HIGH); // Turn on LED.
-#endif
   while (true) {
     // Stop execution.
+#ifdef DEBUG_LED
+    blinkLED(1000);
+#endif
   }
 }
 

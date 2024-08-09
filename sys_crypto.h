@@ -20,7 +20,7 @@
 #include "sys_logStatus.h"
 #include "sys_serial_utils.h"
 
-#define CRYPTO_SLOT 0
+#define CRYPTO_SLOT 0   // can be value 0 - 4
 
 // interactive routine to configure the crypto of the device when connected to the serial port in the IDE.
 // needed the first time when setting it up to configure the crypto
@@ -31,10 +31,8 @@ void configureCrypto() {
   }
 
   if (!ECCX08.locked()) {
-    String lock = promptAndReadLine("The ECCX08 on your board is not locked, would you like to PERMANENTLY configure and lock it now? (y/N)", "N");
-    lock.toLowerCase();
-
-    if (!lock.startsWith("y")) {
+    if (!promptAndReadYesNo("The ECCX08 on your board is not locked, would you like to PERMANENTLY configure and lock it now?", false) )
+    {
       logSuspend("Unfortunately you can't proceed without locking it :(");
     }
 
@@ -49,51 +47,61 @@ void configureCrypto() {
     logStatus("ECCX08 locked successfully");
   }
 
-  // don't need this in this application
+  // CONFIGURE CRYPTO_SLOT IN CONSTANTS of the module header
   // Serial.println("Hi there, in order to generate a PEM public key for your board, we'll need the following information ...");
   // Serial.println();
-  // String slot               = promptAndReadLine("What slot would you like to use? (0 - 4)", "0");
+  // String slot               = promptAndReadLine("What slot would you like to use? (0 - 4)", String(CRYPTO_SLOT));
   String slot = String(CRYPTO_SLOT);
 
-  String generateNewKey     = promptAndReadLine("Would you like to generate a new private key? (Y/n)", "Y");
-  Serial.println();
-  generateNewKey.toLowerCase();
-
-  String publicKeyPem = ECCX08JWS.publicKey(slot.toInt(), generateNewKey.startsWith("y"));
+  String publicKeyPem = ECCX08JWS.publicKey(CRYPTO_SLOT, false); 
+  if (publicKeyPem == "") {
+    Serial.println("Key missing at slot [" + slot + "]");
+    // generate a new private key
+    if promptAndReadYesNo("Would you like to generate a new private key?", true)  {
+      Serial.println("Generating new key pair at slot [" + slot + "]...");
+      publicKeyPem = ECCX08JWS.publicKey(slot.toInt(), true);
+    }
+  } else {
+    Serial.println("Current public key PEM at slot [" + slot + "]:");
+    Serial.println(publicKeyPem);
+    // uncomment this to interactively request at serial console for new key creation
+    // if promptAndReadYesNo("Would you like to generate a new private key?", true)  {
+    //   Serial.println("Generating new key pair at slot [" + slot + "]...");
+    //  publicKeyPem = ECCX08JWS.publicKey(slot.toInt(), true);
+    //  Serial.println("Here's your public key PEM, at slot [" + slot + "]:");
+    //  Serial.println();
+    //  Serial.println(publicKeyPem);
+    // }
+  }
 
   if (!publicKeyPem || publicKeyPem == "") {
     logSuspend("Error generating public key!");
   }
 
-  Serial.println("Here's your public key PEM, enjoy!");
-  Serial.println();
-  Serial.println(publicKeyPem);
 }
 
 void setupCrypto()
 {
+
+  // if the serial port is connected, run the interactive configuration checks for the crypto
+  if (Serial) {
+    configureCrypto();
+  }
+
+  // now run the checks for complete configuration
   if (!ECCX08.begin())
   {
     logSuspend("No ECCX08 present!");
   }
   if (!ECCX08.locked())
   {
-    logStatus("The ECCX08 on your board is not locked!");
-    configureCrypto();
+    logSuspend("The ECCX08 on your board is not locked. Please configure the crypto.");
   }
   String publicKey = ECCX08JWS.publicKey(CRYPTO_SLOT, false);
   if (publicKey == "")
   {
-    logStatus("Key missing. Generate a new key pair!");
-    configureCrypto();
+    logSuspend("Key missing. Generate a new key pair. Please configure the crypto.");
   }
-
-  logStatus("Crypto Configured");
-  logText(publicKey);
-
-  // uncomment this line if you want to change the key on the device
-  // REMEMBER TO COMMENT OUT AQAIN BEFORE RUNNING ALONE
-  //configureCrypto();
   
 }
 

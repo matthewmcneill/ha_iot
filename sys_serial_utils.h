@@ -42,3 +42,9 @@ String promptAndReadLine(const char* prompt, const char* defaultValue) {
   return s;
 }
 
+bool promptAndReadYesNo(String prompt, bool defaultValue) {
+  prompt = prompt + (defaultValue ? " (Y/n)" : " (y/N)" );
+  String yesno = promptAndReadLine(prompt.c_str(), defaultValue ? "Y" : "N");
+  yesno.toLowerCase();
+  return (yesno.startsWith("y"));
+}

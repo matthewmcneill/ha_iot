@@ -1,30 +1,31 @@
 // ----[CONFIG MODULE]----- 
 // software configurations and definitions
 #pragma once
+#include <Arduino.h>
 #include <Preferences.h>
 #include "sys_logStatus.h"
 #include "sys_serial_utils.h"
 
-// uncomment this to force a reconfiguration of the parameters
-// this requires the device to be connected to the serial console for setup
-#define FORCE_RECONFIGURE false
+// to help with debugging, if you want to disable the interactive Serial config options
+// set this to true and it will not force interactive
+#define NO_RECONFIGURE false
 
 Preferences preferences;
 
 struct ConfigurationStructType {
-  // general configuration items, defaults can be specified here, leave blank if you want to force setup
-  String deviceID               = "";
-  String deviceSoftwareVersion  = "1.0.1";
-  String deviceManufacturer     = "Arduino";
-  String deviceModel            = "Nano 33 IoT"; 
-  String timeZone               = "Europe/London";
-  IPAddress mqttBrokerAddress   = IPAddress(0,0,0,0);   
+  // general configuration items, defaults can be specified here, leave blank if you want to use interactive setup
+  String deviceID               = "";                               // used for WiFi and Home Assistant device IDs
+  String deviceSoftwareVersion  = "1.0.1";                          // used by Home Assistant
+  String deviceManufacturer     = "Arduino";                        // used by Home Assistant
+  String deviceModel            = "Nano 33 IoT";                    // used by Home Assistant
+  String timeZone               = "Europe/London";                  // used by NTP Time Libraries
+  IPAddress mqttBrokerAddress   = IPAddress(0,0,0,0);               // used by Home Assistant for MQTT broker
 
   // Secret Items (really should NOT have defaults specificed here in the source code)
-  String secretWiFiSSID         = ""; 
-  String secretWiFiPassword     = ""; 
-  String secretMqttUser         = "";
-  String secretMqttPassword     = "";    
+  String secretWiFiSSID         = "";                               // used by WiFi
+  String secretWiFiPassword     = "";                               // used by WiFi
+  String secretMqttUser         = "";                               // used by Home Assistant for MQTT broker
+  String secretMqttPassword     = "";                               // used by Home Assistant for MQTT broker
 } config;
 
 
@@ -63,6 +64,15 @@ String loadConfig(String key, String defaultValue = "", String prompt = "", bool
 
 
 void setupConfig() {
+  bool doReconfigure;
+
+  if (Serial && !NO_RECONFIGURE) {
+    // if we have a serial port connection to the IDE terminal ask for forced reconfiguration
+    // note: interactive reconfiguration will always occur if mandatory items are not set and there are no defaults
+    doReconfigure = promptAndReadYesNo("Do you want to configure the device?", false);
+  } else {
+    doReconfigure = false;
+  }
 
   preferences.begin("config");
 
@@ -71,18 +81,8 @@ void setupConfig() {
       config.deviceID,
       "Enter a unique network device ID that is used when connecting to the WifI and Home Assistant: ",
       true,
-      FORCE_RECONFIGURE
+      doReconfigure
     );
-
-    /* not sure we should store this in the EEPROM - it is a property of the SW, just use the coded default
-    config.deviceSoftwareVersion = loadConfig(
-      "dvc_sw_ver", 
-      config.deviceSoftwareVersion,
-      "Software Version: this should not need to be configured: ",
-      true,
-      false
-    );
-    */
 
     config.deviceManufacturer = loadConfig(
       "dvc_manuf", 
@@ -105,7 +105,7 @@ void setupConfig() {
       config.timeZone,
       "Enter a standard TimeZone for your device to configure local time. A full list is available here https://en.wikipedia.org/wiki/List_of_tz_database_time_zones : ",
       true,
-      FORCE_RECONFIGURE
+      doReconfigure
     );
 
     while (!config.mqttBrokerAddress.fromString( 
@@ -114,7 +114,7 @@ void setupConfig() {
         config.mqttBrokerAddress.toString(),
         "Please enter a valid IP address for the MQTT broker: ",
         true,
-        FORCE_RECONFIGURE 
+        doReconfigure 
       ).c_str() )) 
     {
       logStatus("Could not parse IP Address, or IP address is unconfigured value 0.0.0.0, please try again.");
@@ -129,7 +129,7 @@ void setupConfig() {
       config.secretWiFiSSID,
       "Enter your WiFi network SSID: ",
       true,
-      FORCE_RECONFIGURE
+      doReconfigure
     );
 
     config.secretWiFiPassword = loadConfig(
@@ -137,7 +137,7 @@ void setupConfig() {
       config.secretWiFiPassword,
       "Enter your WiFi password: ",
       true,
-      FORCE_RECONFIGURE
+      doReconfigure
     );
 
     config.secretMqttUser = loadConfig(
@@ -145,7 +145,7 @@ void setupConfig() {
       config.secretMqttUser,
       "Enter your MQTT broker user name: ",
       true,
-      FORCE_RECONFIGURE
+      doReconfigure
     );
 
     config.secretMqttPassword = loadConfig(
@@ -153,9 +153,20 @@ void setupConfig() {
       config.secretMqttPassword,
       "Enter your MQTT broker password: ",
       true,
-      FORCE_RECONFIGURE
+      doReconfigure
     );
 
   preferences.end();
 
+}
+
+String getUniqueChipID() {
+  // Get the unique device ID (for SAMD-based boards)
+  uint32_t uniqueID = *(uint32_t*)0x0080A00C;
+
+  // Convert the ID to a string (hexadecimal representation)
+  char uniqueIDStr[9]; // 8 hex digits + null terminator
+  sprintf(uniqueIDStr, "%08X", uniqueID);
+
+  return String(uniqueIDStr);
 }

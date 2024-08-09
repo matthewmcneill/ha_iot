@@ -8,6 +8,25 @@
 #include "sys_logStatus.h"
 #include "sys_wifi.h"
 
+// ================================[ A cache of persistent strings for UIDs ]==================================
+// this hacky work around is required because the homeassistant library does not make local copies of the strings 
+// being used, but just keeps references to the pointers to the char arrays.  So it works fine with constants, 
+// but if you are using more dynamic values, which we need for uniqueness, then you need fixed char array 
+// memory address pointers.  Otherwise you will get all sorts of random data in your unique ids.
+// don't use <vectors> because the pointers can change, don't use Strings because the pointers can change.
+#include "sys_static_strings.h"
+
+// Save a string in the array and return a pointer to the saved string
+const char* newUid(const String& name, int instance = -1) {
+    String s_uid = getUniqueChipID();  
+    if (instance >= 0) {
+        s_uid = s_uid + "_" + String(instance);
+    }
+    s_uid = s_uid + "_" + name;  // put the name last in case its very long
+
+    return storeStaticString(s_uid);
+}
+
 // ====================================[ HA device + entity definition ]=======================================
 
 // Turns on debug information of the ArduinoHA core (from <ArduinoHADefines.h>)
@@ -48,14 +67,14 @@ public:
         HASensorNumber temperature;
         // Set up all the entities (note that event handlers are added later)
         HAEntitiesType() : 
-            buttonA("cbButtonA02"), 
-            buttonB("cbButtonB02"),
-            led("cbLed02"),
-            temperature("cbTemperature02", HASensorNumber::PrecisionP1) 
+            buttonA(newUid("ButtonA")), 
+            buttonB(newUid("ButtonB")),
+            led(newUid("Led")),
+            temperature(newUid("Temperature"), HASensorNumber::PrecisionP1) 
             {
               // LED switch
               led.setIcon("mdi:lightbulb");
-              led.setName("My LED"); 
+              led.setName("Device LED"); 
               // Button A
               buttonA.setIcon("mdi:numeric-2-circle"); 
               buttonA.setName("Flash LED 2x"); 

@@ -7,6 +7,7 @@
 
 #include <WiFiNINA.h>
 #include <utility/wifi_drv.h>
+#include <Arduino.h>
 
 #include "sys_config.h"
 #include "sys_logStatus.h"
@@ -63,4 +64,20 @@ void setupWiFi()
     logStatus("Please upgrade WiFi firmware!");
   }
   connectToWiFi();
+}
+
+// helper functions
+String getWiFiMACAddressAsString(bool includeColons = true) {
+  byte mac[6];
+  WiFi.macAddress(mac); 
+
+  String macAddress = "";
+  for (int i = 0; i < 6; ++i) {
+    macAddress += String(mac[i], HEX); // Convert each byte to hex and append
+    if ((i < 5) && (includeColons)) {
+      macAddress += ":"; // Add colon separator (except after the last byte)
+    }
+  }
+
+  return macAddress;
 }
