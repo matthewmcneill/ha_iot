@@ -35,10 +35,12 @@ void resetWiFi() {
   #endif
 
   #ifdef ARDUINO_ARCH_ESP32
-    esp_wifi_disconnect();
-    esp_wifi_stop();
-    esp_wifi_deinit();
-    esp_wifi_init(NULL); // Reinitialize the Wi-Fi driver
+// seems to permanently kill the wifi
+//    esp_wifi_disconnect();
+//    esp_wifi_stop();
+//    esp_wifi_deinit();
+//    esp_wifi_init(NULL); // Reinitialize the Wi-Fi driver
+//    delay(1000);
   #endif
 
 }
@@ -50,17 +52,41 @@ void connectToWiFi()
   {
     return;
   }
+
+  // connect to the wifi
   logStatus("Connecting to WiFi...");
-  WiFi.setHostname(config.deviceID.c_str());
   while(true) {
+    WiFi.setHostname(config.deviceID.c_str());
     status = WiFi.begin(config.secretWiFiSSID.c_str(), config.secretWiFiPassword.c_str());
+#ifdef ARDUINO_ARCH_ESP32
+    status = WiFi.waitForConnectResult();  // needed for ESP32
+#endif
     if (status == WL_CONNECTED) {
       break;
+    } else {
+      // evaluate failure mode   
+      switch (status) {
+      case WL_CONNECT_FAILED:
+        logText("Connection failed. Check SSID and password.");
+        break;
+      case WL_NO_SSID_AVAIL:
+        logText("SSID not found. Check if the network is available.");
+        break;
+      case WL_CONNECTION_LOST:
+        logText("Connection lost. Check network stability.");
+        break;
+      case WL_DISCONNECTED:
+        logText("Connection disconnected. Double-check that you've entered the correct SSID and password.");
+        break; 
+      default:
+        logText("Unknown error [" + String(status) + "] occurred.");
+      }
     }
     logError("Retrying in 5 seconds...");
-    delay(5000);
     resetWiFi();
+    delay(5000);
   }
+
   // log the mac address
   byte mac[6];
   WiFi.macAddress(mac);
@@ -89,6 +115,7 @@ void setupWiFi()
     }
   #endif
 
+  resetWiFi();
   connectToWiFi();
 }
 
