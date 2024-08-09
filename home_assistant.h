@@ -3,6 +3,9 @@
 
 #pragma once
 
+#include <Arduino.h>
+#include <WiFi.h>
+
 // include system modules
 #include "sys_config.h"
 #include "sys_logStatus.h"
@@ -51,7 +54,7 @@ public:
     HADevice device; // HADevice entity object
     HAMqtt mqtt;     // mqtt communication object
     // Constructor for HADataType
-    HADataType(arduino::Client &netClient) :
+    HADataType(Client& netClient) :
         device(),                       
         mqtt(netClient, this->device),  // needs to be constructed here with the newly created device in this order
         entities(),

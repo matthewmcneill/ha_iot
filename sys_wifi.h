@@ -5,9 +5,20 @@
 
 #pragma once
 
-#include <WiFiNINA.h>
-#include <utility/wifi_drv.h>
 #include <Arduino.h>
+
+//Nano IOT 33
+#ifdef ARDUINO_ARCH_SAMD
+  #include <WiFiNINA.h>
+  #include <utility/wifi_drv.h>
+#endif
+
+// Nano ESP 32
+#ifdef ARDUINO_ARCH_ESP32
+  #include <WiFi.h>
+  #include <esp_wifi.h>
+  #define WL_MAC_ADDR_LENGTH 6
+#endif
 
 #include "sys_config.h"
 #include "sys_logStatus.h"
@@ -17,8 +28,19 @@
  * This is currently necessary to switch from BLE to WiFi.
  */
 void resetWiFi() {
-  wiFiDrv.wifiDriverDeinit();
-  wiFiDrv.wifiDriverInit();
+
+  #ifdef ARDUINO_ARCH_SAMD
+    wiFiDrv.wifiDriverDeinit();
+    wiFiDrv.wifiDriverInit();
+  #endif
+
+  #ifdef ARDUINO_ARCH_ESP32
+    esp_wifi_disconnect();
+    esp_wifi_stop();
+    esp_wifi_deinit();
+    esp_wifi_init(NULL); // Reinitialize the Wi-Fi driver
+  #endif
+
 }
 
 void connectToWiFi()
@@ -55,20 +77,24 @@ void setupWiFi()
   {
     logSuspend("WiFi shield missing!");
   }
-  if (status == WL_NO_MODULE)
-  {
-    logSuspend("Communication with WiFi module failed!");
-  }
-  if (WiFi.firmwareVersion() < WIFI_FIRMWARE_LATEST_VERSION)
-  {
-    logStatus("Please upgrade WiFi firmware!");
-  }
+
+  #ifdef ARDUINO_ARCH_SAMD
+    if (status == WL_NO_MODULE)
+    {
+      logSuspend("Communication with WiFi module failed!");
+    }
+    if (WiFi.firmwareVersion() < WIFI_FIRMWARE_LATEST_VERSION)
+    {
+      logStatus("Please upgrade WiFi firmware!");
+    }
+  #endif
+
   connectToWiFi();
 }
 
 // helper functions
 String getWiFiMACAddressAsString(bool includeColons = true) {
-  byte mac[6];
+  byte mac[WL_MAC_ADDR_LENGTH];
   WiFi.macAddress(mac); 
 
   String macAddress = "";
