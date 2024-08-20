@@ -139,6 +139,7 @@ void setupHA() {
 
   // Initialize the HADevice object
   ha.device.setUniqueId(macAddress, sizeof(macAddress));
+  ha.device.enableExtendedUniqueIds();        // essential for code that is uploaded to multiple devices
   ha.device.setName(config.deviceID.c_str());
   ha.device.setSoftwareVersion(config.deviceSoftwareVersion.c_str());
   ha.device.setManufacturer(config.deviceManufacturer.c_str());
